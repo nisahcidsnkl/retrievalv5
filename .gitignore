@@ -1,0 +1,54 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 敏感配置
+.env
+.env.local
+*.key
+
+# 大模型文件 (约 1GB+)
+dinov3-vitl16-pretrain-sat493m/
+
+# 瓦片数据 (可能非常大)
+tiles/
+
+# 示例图片和掩码 (如不需要版本控制)
+examples/
+masks/
+
+# 数据库相关
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.*.swp

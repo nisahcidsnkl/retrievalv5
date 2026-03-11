@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>天瞳-AI全域图侦系统</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha384-o/2yZuJZWGJ4s/adjxVW71R+EO/LyCwdQfP5UWSgX/w87iiTXuvDZaejd3TsN7mf" crossorigin="" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- 自定义CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style4CD.css">
+  <link rel="stylesheet" href="css/style4SelectEx.css">
+  <link rel="stylesheet" href="css/style4modi.css">
+
+
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- 时间轴控件 -->
+  <div class="timeline-control" id="timelineControl">
+    <div class="timeline-label">影像时相:</div>
+    <div class="timeline-buttons" id="timelineButtons">
+      <!-- 年份按钮将通过JavaScript动态生成 -->
+    </div>
+    <div class="timeline-separator"></div>
+    <div style="font-size: 12px; color: #666;">
+      点击切换底图时相
+    </div>
+  </div>
+
+  <!-- 左上角：矢量图层抽屉 -->
+  <button class="vdrawer-toggle" id="vdrawerToggle" title="矢量图层">
+    <i class="fas fa-layer-group"></i>
+  </button>
+  <div class="vdrawer-panel close" id="vdrawerPanel">
+    <div class="vdrawer-content">
+      <div class="vdrawer-header">
+        <div class="vdrawer-title">
+          <i class="fas fa-vector-square"></i>
+          矢量图层（GeoJSON）
+        </div>
+      </div>
+
+      <div class="vdrawer-section">
+        <div class="vdrawer-desc">
+          仅支持上传 .geojson（按WGS84绘制；若检测到3857将自动转换）。
+        </div>
+
+        <div class="vdrawer-uploader">
+          <input type="file" id="geojsonInput" accept=".geojson,.json,application/geo+json,application/json" multiple />
+          <button class="btn btn-success" id="geojsonUploadBtn" style="margin:10px 0 0 0; width:100%;">
+            <i class="fas fa-upload btn-icon"></i>上传GeoJSON
+          </button>
+        </div>
+
+        <div class="vdrawer-actions">
+          <button class="btn btn-secondary" id="geojsonShowAllBtn" style="width: 48%;">
+            <i class="fas fa-eye btn-icon"></i>全部显示
+          </button>
+          <button class="btn btn-warning" id="geojsonHideAllBtn" style="width: 48%;">
+            <i class="fas fa-eye-slash btn-icon"></i>全部隐藏
+          </button>
+        </div>
+      </div>
+
+      <div class="vdrawer-section">
+        <div class="vdrawer-subtitle">
+          <i class="fas fa-list"></i> 图层列表
+          <span class="vdrawer-count" id="geojsonCount">0</span>
+        </div>
+
+        <div class="vdrawer-list" id="geojsonList">
+          <div class="vdrawer-empty" id="geojsonEmpty">
+            暂无图层。请上传 .geojson 文件。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 顶部中间搜索框 -->
+  <div class="top-search" id="topSearch">
+    <div class="top-search-inner">
+      <i class="fas fa-search"></i>
+      <input id="locSearchInput" type="text"
+        placeholder="输入地名或坐标：如 杭州西湖 / 30.2027,120.068" />
+      <select id="locCoordType">
+        <option value="auto" selected>自动识别</option>
+        <option value="wgs84">WGS84(EPSG:4326)</option>
+        <option value="gcj02">GCJ-02(高德/腾讯)</option>
+        <option value="bd09">BD-09(百度)</option>
+        <option value="epsg3857">EPSG:3857(WebMercator)</option>
+      </select>
+      <button class="btn btn-success" id="locSearchBtn" style="margin:0; padding:10px 14px;">
+        定位
+      </button>
+    </div>
+    <div class="top-search-hint" id="locSearchHint"></div>
+  </div>
+
+  <!-- 加载指示器 -->
+  <div class="loading" id="loadingIndicator">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">正在搜索相似图斑...</div>
+    <div class="loading-subtext" id="loadingSubtext">使用大模型进行特征匹配和聚合分析</div>
+    <div class="loading-progress">
+      <div class="loading-progress-bar"></div>
+    </div>
+    <div style="font-size: 12px; color: #999;">
+      <i class="fas fa-sync-alt fa-spin"></i> 请稍候，这可能需要几秒钟...
+    </div>
+  </div>
+
+  <!-- 抽屉面板 -->
+  <button class="drawer-toggle" id="drawerToggle"><i class="fas fa-bars"></i></button>
+  <div class="drawer-panel" id="drawerPanel">
+    <div class="drawer-content">
+      <!-- 齿轮按钮放在右上角，替换原来的关闭按钮 -->
+      <button class="gear-button" id="gearButton" title="示例图片管理">
+        <i class="fas fa-cog"></i>
+      </button>
+
+      <h3 style="margin-top: 0; color: #333; font-weight: 700; font-size: 22px; display: flex; align-items: center;">
+        <i class="fas fa-satellite" style="margin-right: 12px; color: #667eea;"></i>天瞳-AI全域图侦系统
+      </h3>
+      <div style="color: #666; margin-bottom: 25px; font-size: 14px; line-height: 1.6;">
+        以图搜图、变化检测。
+      </div>
+
+      <!-- 初始状态提示 -->
+      <div class="initial-state" id="initialState">
+        <div class="initial-icon"><i class="fas fa-map-marked-alt"></i></div>
+        <div class="initial-title">开始搜索</div>
+        <div class="initial-description">
+          选择搜索模式：以图搜图或变化检测。绘制感兴趣区域或上传示例图片进行搜索。
+        </div>
+        <div class="search-mode-tabs" id="searchModeTabs">
+          <div class="search-mode-tab active" data-mode="single">以图搜图</div>
+          <div class="search-mode-tab" data-mode="change">跨时相变化搜索</div>
+        </div>
+        <button class="btn btn-success" id="startDrawBtnIntro" style="margin-top: 15px;">
+          <i class="fas fa-draw-polygon btn-icon"></i>进入
+        </button>
+        <div class="initial-steps">
+          <strong>使用步骤:</strong>
+          <ol>
+            <li>选择搜索模式：以图搜图或跨时相变化搜索</li>
+            <li>绘制搜索区域或选择示例图片</li>
+            <li>调整搜索参数（可选）</li>
+            <li>点击"开始搜索"按钮</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- 控制面板 -->
+      <div class="control-panel" id="controlPanel" style="display: none;">
+        <!-- 搜索模式切换 -->
+        <div class="control-group">
+          <label class="control-label">
+<!--            <span><i class="fas fa-search"></i> 选择一种模式 </span>-->
+            <span style="font-size:12px;color:#999;font-weight:600;">切换搜索模式</span>
+          </label>
+          <div class="search-mode-tabs" id="searchModeTabs2">
+            <div class="search-mode-tab active" data-mode="single">以图搜图</div>
+            <div class="search-mode-tab" data-mode="change">跨时相变化搜索</div>
+          </div>
+        </div>
+<!-- 单时相搜索 -->
+<div class="control-group" id="singleSearchGroup">
+  <label class="control-label">
+<!--    <span><i class="fas fa-image"></i> 选择一种输入模式</span>-->
+    <span style="font-size:12px;color:#999;font-weight:600;">切换输入模式</span>
+  </label>
+
+  <!-- 子模式切换 -->
+  <div class="single-submode-tabs" id="singleSubModeTabs">
+    <div class="single-submode-tab active" data-submode="map">地图ROI模式</div>
+    <div class="single-submode-tab" data-submode="upload">上传图片模式</div>
+  </div>
+
+  <!-- 地图ROI模式 -->
+  <div id="singleMapMode" class="single-submode">
+      <div class="roi-info" id="singleRoiInfo">
+        请先在地图上绘制待搜索区域，然后点击开始搜索按钮。
+      </div>
+  </div>
+
+  <!-- 上传图片模式 -->
+  <div id="singleUploadMode" class="single-submode" style="display: none;">
+    <div class="sample-phase-container">
+      <div class="sample-phase">
+        <div class="phase-header">
+          <div class="phase-title">
+            <i class="fas fa-image"></i>
+            选择示例图片
+          </div>
+          <div class="phase-status" id="singlePhaseStatus">
+            未配置
+          </div>
+        </div>
+
+        <div class="phase-add-area" id="phaseSingleAddArea" style="width: 100%; height: 80px; border: 2px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 10px 0; background-color: #f8f9fa; cursor: pointer;">
+          <div style="text-align: center;">
+            <div style="font-size: 24px; color: #667eea; margin-bottom: 5px;">
+              <i class="fas fa-plus"></i>
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              点击选择示例图片
+            </div>
+          </div>
+        </div>
+
+        <!-- 已选图片预览 -->
+        <div class="selected-sample-preview" id="singleSelectedPreview" style="display: none;">
+          <div class="selected-sample-header">
+            <div style="font-weight: 600; color: #333; font-size: 14px;">已选图片</div>
+            <button class="btn btn-sm btn-warning" id="removeSingleSampleBtn" style="padding: 2px 8px; font-size: 12px;">
+              <i class="fas fa-times"></i> 移除
+            </button>
+          </div>
+          <div class="selected-sample-content">
+            <img id="singleSelectedImage" src="" alt="已选图片" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 2px solid #667eea;">
+            <div class="selected-sample-info">
+              <div id="singleSelectedName" style="font-weight: 600; font-size: 14px; margin-bottom: 5px;"></div>
+              <div id="singleSelectedYear" style="font-size: 12px; color: #666;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 隐藏上传输入 -->
+<input id="singlePhaseUploadInput" type="file" accept="image/png,image/jpeg" style="display:none;" />
+
+        <!-- 变化检测搜索 -->
+        <div class="control-group" id="changeSearchGroup" style="display: none;">
+          <label class="control-label">
+            <span><i class="fas fa-exchange-alt"></i> 跨时相变化搜索</span>
+            <span style="font-size:12px;color:#999;font-weight:600;">两种输入模式</span>
+          </label>
+
+          <!-- 子模式切换 -->
+          <div class="change-submode-tabs" id="changeSubModeTabs">
+            <div class="change-submode-tab active" data-submode="map">地图ROI模式</div>
+            <div class="change-submode-tab" data-submode="upload">上传图片模式</div>
+          </div>
+
+          <!-- 地图ROI模式 -->
+          <div id="changeMapMode" class="change-submode">
+            <div class="map-roi-controls">
+              <div class="roi-info" id="roiInfo">
+                未绘制ROI区域。请点击下方按钮在地图上绘制一个区域。
+              </div>
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn btn-secondary" id="drawROIBtn" style="flex: 1;">
+                  <i class="fas fa-draw-polygon btn-icon"></i>绘制ROI区域
+                </button>
+                <button class="btn btn-warning" id="clearROIBtn1" style="flex: 1;" disabled>
+                  <i class="fas fa-eraser btn-icon"></i>清空ROI
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上传图片模式-跨时相比对搜索 -->
+
+        <div id="changeUploadMode" class="change-submode" style="display: none;">
+          <div class="sample-phase-container">
+          <!-- 前时相 -->
+         <div class="sample-phase">
+         <div class="phase-header">
+         <div class="phase-title">
+          <i class="fas fa-calendar-alt"></i>
+          前时相配置
+          <!-- 年份下拉框 -->
+          <select class="phase-year-select" id="beforePhaseYear" style="margin-left: 8px; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px; height: 24px;">
+            <option value="">请选择年份</option>
+          </select>
+        </div>
+        <div class="phase-status" id="beforePhaseStatus">
+          未配置
+        </div>
+        </div>
+
+      <div class="phase-add-area" id="phaseBeforeAddArea" style="width: 100%; height: 80px; border: 2px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 10px 0; background-color: #f8f9fa; cursor: pointer;">
+        <div style="text-align: center;">
+          <div style="font-size: 24px; color: #667eea; margin-bottom: 5px;">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div style="font-size: 12px; color: #666;">
+            点击添加前时相图片
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 后时相 -->
+    <div class="sample-phase">
+      <div class="phase-header">
+        <div class="phase-title">
+          <i class="fas fa-calendar-check"></i>
+          后时相配置
+          <!-- 年份下拉框 -->
+          <select class="phase-year-select" id="afterPhaseYear" style="margin-left: 8px; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px; height: 24px;">
+            <option value="">请选择年份</option>
+          </select>
+        </div>
+        <div class="phase-status" id="afterPhaseStatus">
+          未配置
+        </div>
+      </div>
+
+      <div class="phase-add-area" id="phaseAfterAddArea" style="width: 100%; height: 80px; border: 2px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 10px 0; background-color: #f8f9fa; cursor: pointer;">
+        <div style="text-align: center;">
+          <div style="font-size: 24px; color: #667eea; margin-bottom: 5px;">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div style="font-size: 12px; color: #666;">
+            点击添加后时相图片
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+          <!-- 变化检测搜索按钮 -->
+          <div class="change-search-actions">
+            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+              <i class="fas fa-info-circle"></i> 请确保前后时相都已准备好
+            </div>
+            <button class="btn btn-success" id="changeSearchBtn" disabled>
+              <i class="fas fa-search btn-icon"></i>开始变化检测
+            </button>
+          </div>
+
+          <div style="font-size:12px;color:#777;margin-top:8px;">
+            分别准备前时相和后时相示例图片，系统将检测两时相间的地貌变化。
+          </div>
+        </div>
+
+        <!-- 隐藏上传输入：点击"+"触发 -->
+        <input id="sampleUploadInput" type="file" accept="image/png,image/jpeg" style="display:none;" />
+        <input id="beforePhaseUploadInput" type="file" accept="image/png,image/jpeg" style="display:none;" />
+        <input id="afterPhaseUploadInput" type="file" accept="image/png,image/jpeg" style="display:none;" />
+
+        <div class="control-group">
+          <label class="control-label">
+            <span><i class="fas fa-sort-numeric-down"></i> 前N个图斑</span>
+            <span class="control-value" id="topNValue">100</span>
+          </label>
+          <div class="slider-container">
+            <input type="range" id="topNSlider" min="50" max="500" step="10" value="100">
+          </div>
+          <div class="slider-ticks">
+            <span>50</span>
+            <span>150</span>
+            <span>250</span>
+            <span>350</span>
+            <span>500</span>
+          </div>
+          <div style="font-size: 12px; color: #777; margin-top: 8px;">
+            取相似度最高的前N个图斑进行空间聚合
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px;">
+          <button class="btn btn-success" id="searchBtn" disabled>
+            <i class="fas fa-search btn-icon"></i>开始搜索
+          </button>
+          <button class="btn btn-secondary" id="resetBtn">
+            <i class="fas fa-redo btn-icon"></i>重置
+          </button>
+          <button class="btn btn-warning" id="clearBtn">
+            <i class="fas fa-eraser btn-icon"></i>清空绘制
+          </button>
+          <button class="btn" id="saveBtn" disabled>
+            <i class="fas fa-download btn-icon"></i>保存截图
+          </button>
+        </div>
+      </div>
+
+      <!-- 单时相统计信息 -->
+      <div class="stats-panel" id="statsPanel" style="display: none;">
+        <div class="stats-header">
+          <div class="stats-title"><i class="fas fa-chart-bar"></i> 搜索结果统计</div>
+          <div class="similarity-badge" id="overallSimilarity">0%</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="filteredCount">0</div>
+            <div class="stat-label">参与聚合图斑</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="targetCount">0</div>
+            <div class="stat-label">目标数量</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="maxSimilarity">0%</div>
+            <div class="stat-label">最高相似度</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="minSimilarity">0%</div>
+            <div class="stat-label">最低相似度</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 单时相预览区域 -->
+      <div class="preview-area" id="previewArea" style="display: none;">
+        <div class="preview-header">
+          <div class="preview-title"><i class="fas fa-images"></i> 搜索结果预览</div>
+          <div class="similarity-badge" id="previewSimilarity">0%</div>
+        </div>
+        <div class="preview-images">
+          <div class="preview-img-container">
+            <div class="preview-label">查询图像</div>
+            <img id="previewImage" class="preview-img" src="" alt="查询图像预览">
+          </div>
+          <div class="preview-img-container">
+            <div class="preview-label">掩码图像</div>
+            <img id="previewMask" class="preview-img" src="" alt="掩码图像预览">
+          </div>
+        </div>
+      </div>
+
+      <!-- 变化检测统计信息 -->
+      <div class="change-preview-area" id="changeStatsPanel" style="display: none;">
+        <div class="preview-header">
+          <div class="preview-title"><i class="fas fa-exchange-alt"></i> 变化检测结果</div>
+          <div class="similarity-badge" id="changeOverallSimilarity">0%</div>
+        </div>
+
+        <div class="change-results">
+          <!-- 前时相结果 -->
+          <div class="change-phase-results">
+            <div class="change-phase-header">
+              <div class="change-phase-title">
+                <i class="fas fa-calendar-alt"></i>
+                前时相 (2023)
+              </div>
+              <div class="similarity-badge" id="phaseBeforeSimilarity">0%</div>
+            </div>
+            <div class="change-stats">
+              <div class="change-stat">
+                <div class="change-stat-value" id="phaseBeforeTargetCount">0</div>
+                <div class="change-stat-label">目标数量</div>
+              </div>
+              <div class="change-stat">
+                <div class="change-stat-value" id="phaseBeforeAvgSimilarity">0%</div>
+                <div class="change-stat-label">平均相似度</div>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              发现 <span id="phaseBeforePatchCount" style="font-weight:700;">0</span> 个相似图斑
+            </div>
+          </div>
+
+          <!-- 后时相结果 -->
+          <div class="change-phase-results">
+            <div class="change-phase-header">
+              <div class="change-phase-title">
+                <i class="fas fa-calendar-check"></i>
+                后时相 (2025)
+              </div>
+              <div class="similarity-badge" id="phaseAfterSimilarity">0%</div>
+            </div>
+            <div class="change-stats">
+              <div class="change-stat">
+                <div class="change-stat-value" id="phaseAfterTargetCount">0</div>
+                <div class="change-stat-label">目标数量</div>
+              </div>
+              <div class="change-stat">
+                <div class="change-stat-value" id="phaseAfterAvgSimilarity">0%</div>
+                <div class="change-stat-label">平均相似度</div>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              发现 <span id="phaseAfterPatchCount" style="font-weight:700;">0</span> 个相似图斑
+            </div>
+          </div>
+        </div>
+
+        <!-- 变化对比预览 -->
+        <div class="change-preview-images" id="changePreviewImages" style="display: none;">
+          <!-- 前时相预览 -->
+          <div class="change-preview-phase">
+            <div class="change-preview-phase-title">前时相 (2023)</div>
+            <div class="change-preview-phase-images">
+              <div class="preview-img-container">
+                <div class="change-preview-phase-label">查询图像</div>
+                <img id="changePreviewBeforeImage" class="preview-img" src="" alt="前时相查询图像">
+              </div>
+              <div class="preview-img-container">
+                <div class="change-preview-phase-label">掩码图像</div>
+                <img id="changePreviewBeforeMask" class="preview-img" src="" alt="前时相掩码图像">
+              </div>
+            </div>
+          </div>
+
+          <!-- 后时相预览 -->
+          <div class="change-preview-phase">
+            <div class="change-preview-phase-title">后时相 (2025)</div>
+            <div class="change-preview-phase-images">
+              <div class="preview-img-container">
+                <div class="change-preview-phase-label">查询图像</div>
+                <img id="changePreviewAfterImage" class="preview-img" src="" alt="后时相查询图像">
+              </div>
+              <div class="preview-img-container">
+                <div class="change-preview-phase-label">掩码图像</div>
+                <img id="changePreviewAfterMask" class="preview-img" src="" alt="后时相掩码图像">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索结果列表 -->
+      <div class="result-list" id="resultList" style="display: none;">
+        <!-- 搜索结果将通过JavaScript动态填充 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 示例图片编辑 Modal -->
+  <div class="sample-modal" id="sampleModal" style="display:none;">
+    <div class="sample-modal-content">
+      <div class="sample-modal-header">
+        <div class="sample-modal-title">
+          <i class="fas fa-image" style="margin-right:8px;color:#667eea;"></i>
+          <span id="sampleModalName">示例图片</span>
+        </div>
+
+        <button class="sample-modal-close" id="sampleModalCloseBtn" title="关闭">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="sample-modal-body">
+        <div class="sample-canvas-wrap" id="sampleCanvasWrap">
+          <img id="sampleModalImg" alt="sample" draggable="false" />
+          <canvas id="sampleDrawCanvas"></canvas>
+        </div>
+
+        <div class="sample-modal-actions">
+          <button class="btn btn-secondary" id="sampleStartDrawBtn">
+            <i class="fas fa-draw-polygon btn-icon"></i>开始/重绘
+          </button>
+
+          <button class="btn btn-success" id="sampleSaveBtn" disabled>
+            <i class="fas fa-save btn-icon"></i>保存样本
+          </button>
+
+          <button class="btn btn-success" id="sampleFinishSearchBtn" disabled>
+            <i class="fas fa-search btn-icon"></i>完成并搜索
+          </button>
+        </div>
+
+        <div style="font-size:12px;color:#777;margin-top:10px;">
+          绘制：单击加点，双击结束；Ctrl+Z 撤销；Esc 取消。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 示例图片管理弹出框 -->
+  <div class="sample-management-modal" id="sampleManagementModal" style="display:none;">
+    <div class="sample-management-content">
+      <div class="sample-management-header">
+        <div class="sample-management-title">
+          <i class="fas fa-images"></i>
+          示例图片管理
+        </div>
+        <button class="sample-management-close" id="sampleManagementCloseBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="sample-management-body">
+        <!-- 左侧边栏 -->
+        <div class="sample-management-sidebar">
+          <div class="sidebar-section">
+            <div class="sidebar-title">管理功能</div>
+            <ul class="sidebar-list">
+              <li class="active" data-tab="tag-manager">
+                <i class="fas fa-tags"></i>
+                标签管理
+              </li>
+              <li data-tab="upload-manager">
+                <i class="fas fa-upload"></i>
+                上传示例图片
+              </li>
+              <li data-tab="sample-browser">
+                <i class="fas fa-search"></i>
+                浏览示例图片
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-title">标签筛选</div>
+            <ul class="sidebar-list" id="tagFilterList">
+              <!-- 标签将通过JS动态加载 -->
+              <li class="loading-tags">
+                <i class="fas fa-spinner fa-spin"></i>
+                加载标签中...
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-title">统计信息</div>
+            <div style="padding: 10px; background: #f1f3f5; border-radius: 6px;">
+              <div style="font-size: 12px; color: #666; margin-bottom: 5px;">总图片数</div>
+              <div id="totalSamplesCount" style="font-size: 24px; font-weight: bold; color: #667eea;">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧主内容区 -->
+        <div class="sample-management-main">
+          <!-- 标签管理标签页 -->
+          <div class="tab-content active" id="tag-manager">
+            <div class="tab-title">
+              <i class="fas fa-tags"></i>
+              标签管理
+            </div>
+            <div class="tag-manager">
+              <div class="tag-input-group">
+                <input type="text" id="newTagInput" class="tag-input" placeholder="输入新标签名称">
+                <button class="btn btn-success" id="addTagBtn">
+                  <i class="fas fa-plus"></i> 添加标签
+                </button>
+              </div>
+
+              <div class="tag-list" id="tagListContainer">
+                <!-- 标签将通过JS动态加载 -->
+                <div style="text-align: center; padding: 20px; color: #999;">
+                  <i class="fas fa-spinner fa-spin"></i> 加载标签中...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上传示例图片标签页 -->
+          <div class="tab-content" id="upload-manager">
+            <div class="tab-title">
+              <i class="fas fa-upload"></i>
+              上传示例图片
+            </div>
+
+            <div class="upload-area" id="uploadDropArea">
+              <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+              </div>
+              <div class="upload-hint">点击或拖拽上传图片</div>
+              <div class="upload-subhint">支持 PNG, JPG 格式，图片将被缩放至256×256像素</div>
+              <input type="file" id="uploadFileInput" class="upload-file-input" accept="image/png,image/jpeg">
+            </div>
+
+            <!-- 上传预览 -->
+            <div class="upload-preview-container" id="uploadPreviewContainer">
+              <div class="upload-preview-title">上传预览</div>
+              <div class="upload-preview" id="uploadPreview">
+                <!-- 预览内容将通过JS动态填充 -->
+              </div>
+
+              <!-- ROI绘制区域 -->
+              <div class="roi-canvas-container" id="roiCanvasContainer" style="display: none;">
+                <img id="roiPreviewImage" class="roi-image" alt="ROI绘制预览">
+                <canvas id="roiDrawingCanvas" class="roi-canvas"></canvas>
+              </div>
+
+              <!-- ROI绘制提示 -->
+              <div id="roiInstructions" style="display: none; padding: 15px; background: #e8f4ff; border-radius: 8px; margin: 15px 0;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <i class="fas fa-info-circle" style="color: #2196F3; font-size: 20px;"></i>
+                  <div style="font-weight: 600; color: #0d47a1;">ROI区域绘制说明</div>
+                </div>
+                <div style="font-size: 14px; color: #333; line-height: 1.5;">
+                  1. 在图片上单击添加多边形顶点<br>
+                  2. 双击完成多边形绘制<br>
+                  3. 按Ctrl+Z可撤销上一个顶点<br>
+                  4. 按Esc可取消绘制<br>
+                  5. 至少需要3个点才能构成多边形
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                  <button class="btn btn-secondary" id="clearRoiBtn">
+                    <i class="fas fa-eraser"></i> 清空绘制
+                  </button>
+                  <button class="btn btn-warning" id="cancelRoiBtn">
+                    <i class="fas fa-times"></i> 取消绘制
+                  </button>
+                </div>
+              </div>
+
+              <!-- 上传表单 -->
+              <div class="upload-form" id="uploadForm" style="display: none;">
+                <div class="form-group">
+                  <label for="sampleNameInput" class="form-label">图片名称</label>
+                  <input type="text" id="sampleNameInput" class="form-control" placeholder="请输入图片名称">
+                </div>
+
+                <div class="form-group">
+                  <label for="sampleTagSelect" class="form-label">选择标签</label>
+                  <select id="sampleTagSelect" class="form-control">
+                    <option value="">请选择标签</option>
+                    <!-- 标签选项将通过JS动态加载 -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="sampleDescription" class="form-label">描述（可选）</label>
+                  <textarea id="sampleDescription" class="form-control" rows="3" placeholder="请输入图片描述"></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-secondary" id="cancelUploadBtn">
+                    取消
+                  </button>
+                  <button class="btn btn-success" id="confirmUploadBtn" disabled>
+                    <i class="fas fa-upload"></i> 上传图片
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 浏览示例图片标签页 -->
+          <div class="tab-content" id="sample-browser">
+            <div class="tab-title">
+              <i class="fas fa-search"></i>
+              浏览示例图片
+            </div>
+
+            <div class="sample-grid-container">
+              <div class="sample-grid-controls">
+                <select id="browseTagFilter" class="form-control" style="width: 200px;">
+                  <option value="">所有标签</option>
+                  <!-- 标签选项将通过JS动态加载 -->
+                </select>
+                <button class="btn btn-secondary" id="refreshSamplesBtn">
+                  <i class="fas fa-sync-alt"></i> 刷新
+                </button>
+              </div>
+
+              <div class="sample-grid" id="sampleGrid">
+                <!-- 示例图片将通过JS动态加载 -->
+                <div class="empty-state">
+                  <i class="fas fa-image"></i>
+                  <div>暂无示例图片</div>
+                  <div style="font-size: 14px; margin-top: 10px;">请先上传示例图片或选择其他标签</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片查看模态框 -->
+  <div class="image-view-modal" id="imageViewModal">
+    <div class="image-view-content">
+      <div class="image-view-header">
+        <div class="image-view-title" id="imageViewTitle">图片查看</div>
+        <button class="image-view-close" id="imageViewCloseBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="image-view-body">
+        <div class="image-container">
+          <img id="viewedImage" alt="预览图片">
+        </div>
+        <div class="image-info">
+          <div class="info-row">
+            <span class="info-label">文件名：</span>
+            <span id="viewedFileName" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">标签：</span>
+            <span id="viewedFileTag" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">上传时间：</span>
+            <span id="viewedFileTime" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">文件大小：</span>
+            <span id="viewedFileSize" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">描述：</span>
+            <span id="viewedFileDescription" class="info-value"></span>
+          </div>
+          <div style="margin-top: 20px;">
+            <button class="btn btn-danger" id="deleteSampleBtn" style="width: 100%;">
+              <i class="fas fa-trash"></i> 删除此图片
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选择示例图片模态框 -->
+<div class="sample-selector-modal" id="sampleSelectorModal" style="display:none;">
+  <div class="sample-selector-content">
+    <div class="sample-selector-header">
+      <div class="sample-selector-title">
+        <i class="fas fa-images" style="margin-right:8px;color:#667eea;"></i>
+        <span id="sampleSelectorPhaseLabel">选择示例图片</span>
+      </div>
+      <button class="sample-selector-close" id="sampleSelectorCloseBtn" title="关闭">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="sample-selector-body">
+      <!-- 左侧标签筛选栏 -->
+      <div class="sample-selector-sidebar">
+        <div class="selector-sidebar-section">
+          <div class="selector-sidebar-title">
+            <i class="fas fa-tags"></i> 标签筛选
+          </div>
+          <ul class="selector-tag-list" id="selectorTagList">
+            <li class="active" data-tag="">全部标签</li>
+            <!-- 标签将通过JS动态加载 -->
+          </ul>
+        </div>
+
+        <div class="selector-sidebar-section">
+          <div class="selector-sidebar-title">
+            <i class="fas fa-info-circle"></i> 提示
+          </div>
+          <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+            <div style="font-size: 12px; color: #666;">
+              1. 点击缩略图查看图片详情<br>
+              2. 在查看页面点击"选择该图片"按钮完成选择<br>
+              3. 可点击已选图片的对勾取消选择
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧图片展示区 -->
+      <div class="sample-selector-main">
+        <div class="selector-controls">
+          <select id="selectorTagFilter" class="form-control" style="width: 200px;">
+            <option value="">所有标签</option>
+            <!-- 标签选项将通过JS动态加载 -->
+          </select>
+          <div style="font-size: 14px; color: #666; margin-left: auto;">
+            已选择: <span id="selectorSelectedCount">0</span> 张图片
+          </div>
+        </div>
+
+        <div class="selector-grid" id="selectorGrid">
+          <!-- 示例图片将通过JS动态加载 -->
+          <div class="empty-state">
+            <i class="fas fa-image"></i>
+            <div>暂无示例图片</div>
+            <div style="font-size: 14px; margin-top: 10px;">请先上传示例图片或选择其他标签</div>
+          </div>
+        </div>
+
+        <!-- 分页控件 -->
+        <div class="selector-pagination" id="selectorPagination" style="display:none;">
+          <button class="selector-pagination-btn" id="selectorPrevBtn" disabled>
+            <i class="fas fa-chevron-left"></i> 上一页
+          </button>
+          <span class="selector-page-info" id="selectorPageInfo">第 1 页</span>
+          <button class="selector-pagination-btn" id="selectorNextBtn">
+            下一页 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    integrity="sha384-okbbMvvx/qfQkmiQKfd5VifbKZ/W8p1qIsWvE1ROPUfHWsDcC8/BnHohF7vPg2T6" crossorigin=""></script>
+
+  <!-- 主JS文件 -->
+  <!-- 自定义JS模块 -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/drawing.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/sample-management.js"></script>
+  <script src="js/sample-select.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+/* 子模式选项卡样式 */
+.single-submode-tabs {
+  display: flex;
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.single-submode-tab {
+  flex: 1;
+  padding: 8px 12px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.single-submode-tab:hover {
+  background-color: #e9ecef;
+}
+
+.single-submode-tab.active {
+  background-color: #667eea;
+  color: white;
+}
+
+/* 子模式内容区 */
+.single-submode {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+/* 已选图片预览 */
+.selected-sample-preview {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.selected-sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.selected-sample-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.selected-sample-info {
+  flex: 1;
+}
+
+/* ROI信息样式 */
+.roi-info {
+  margin-bottom: 15px;
+  padding: 12px;
+  background-color: #e8f4ff;
+  border-radius: 6px;
+  border-left: 4px solid #2196F3;
+  font-size: 13px;
+  color: #0d47a1;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
