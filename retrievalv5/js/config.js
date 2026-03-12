@@ -1,6 +1,6 @@
 //config.js
 const Config = {
-  serverUrl: 'http://localhost:5007',
+  serverUrl: 'http://localhost:5008',
   zoomLevel: 18,
   tileSize: 256,
   patchSize: 64,
@@ -8,7 +8,7 @@ const Config = {
   initialZoom: 15,
   // 移除写死的tileBaseUrls，改为动态生成
   getTileUrl: function(year) {
-    return `${this.serverUrl}/tile/${year}/{z}/{x}/{y}.png`;
+    return `${this.serverUrl}/tiles/${year}/{z}/{x}/{y}.png`;
   },
   // 当前年份将由后端动态设置
   currentYear: null,

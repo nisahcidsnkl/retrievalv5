@@ -751,5 +751,7 @@ selectSample(sample) {
 let sampleSelector = null;
 document.addEventListener('DOMContentLoaded', () => {
     sampleSelector = new SampleSelector();
+    // 暴露到 window 对象，以便其他模块可以访问
+    window.sampleSelector = sampleSelector;
     console.log('示例图片选择器模块已初始化');
 });
