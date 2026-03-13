@@ -625,44 +625,23 @@ function initEvents() {
   });
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  // 修改这部分代码，使用选择器模块
-const phaseBeforeAddArea = document.getElementById('phaseBeforeAddArea');
-if (phaseBeforeAddArea) {
-    phaseBeforeAddArea.addEventListener('click', () => {
-        // 使用选择器模块打开选择器
-        if (sampleSelector) {
-            sampleSelector.openSelector('before');
-        }
-    });
-}
-
-const phaseAfterAddArea = document.getElementById('phaseAfterAddArea');
-if (phaseAfterAddArea) {
-    phaseAfterAddArea.addEventListener('click', () => {
-        // 使用选择器模块打开选择器
-        if (sampleSelector) {
-            sampleSelector.openSelector('after');
-        }
-    });
-}
-
-  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
   // 同时，添加一个辅助函数来更新变化检测预览
 function updateChangeDetectionDataFromSamples() {
-  const beforeSample = sampleSelector.getSelectedSample('before');
-  const afterSample = sampleSelector.getSelectedSample('after');
+  if (window.sampleSelector) {
+    const beforeSample = window.sampleSelector.getSelectedSample('before');
+    const afterSample = window.sampleSelector.getSelectedSample('after');
 
-  if (beforeSample && afterSample) {
-    updateChangeDetectionPreview(beforeSample, afterSample);
+    if (beforeSample && afterSample) {
+      updateChangeDetectionPreview(beforeSample, afterSample);
+    }
   }
 }
 
 // 在选择示例图片后更新预览
-if (sampleSelector) {
+if (window.sampleSelector) {
   // 监听选择变化
-  const originalSelectSample = sampleSelector.selectSample;
-  sampleSelector.selectSample = function(sample) {
+  const originalSelectSample = window.sampleSelector.selectSample;
+  window.sampleSelector.selectSample = function(sample) {
     const result = originalSelectSample.call(this, sample);
     updateChangeDetectionDataFromSamples();
     return result;
@@ -697,36 +676,23 @@ if (sampleSelector) {
   });
 
   // 变化检测搜索按钮
-  document.getElementById('changeSearchBtn').addEventListener('click', () => {
-    performChangeSearch();
-  });
-
-  // 保存按钮
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    if (!savedImageBlob || !savedMaskBlob) {
-      alert('请先进行搜索');
-      return;
-    }
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const imageSaved = saveBlobToFile(savedImageBlob, `图侦_图像_${timestamp}.png`);
-    const maskSaved = saveBlobToFile(savedMaskBlob, `图侦_掩码_${timestamp}.png`);
-
-    if (imageSaved && maskSaved) {
-      showNotification('截图已保存到下载文件夹！', 'success');
-    } else {
-      showNotification('保存失败，请重试', 'error');
-    }
-  });
+  const changeSearchBtn = document.getElementById('changeSearchBtn');
+  if (changeSearchBtn) {
+    changeSearchBtn.addEventListener('click', () => {
+      performChangeSearch();
+    });
+  }
 
   // 滑块事件
   const topNSlider = document.getElementById('topNSlider');
   const topNValue = document.getElementById('topNValue');
 
-  topNSlider.addEventListener('input', () => {
-    const value = topNSlider.value;
-    topNValue.textContent = value;
-  });
+  if (topNSlider && topNValue) {
+    topNSlider.addEventListener('input', () => {
+      const value = topNSlider.value;
+      topNValue.textContent = value;
+    });
+  }
 
   // 地图点击事件
   map.on('click', (e) => {
@@ -858,8 +824,15 @@ function updateSingleYearDisplay() {
 
 
   // 地图ROI功能按钮 - 注意：HTML中ID为clearROIBtn1
-  document.getElementById('drawROIBtn').addEventListener('click', startMapROIDrawing);
-  document.getElementById('clearROIBtn1').addEventListener('click', clearMapROI);
+  const drawROIBtn = document.getElementById('drawROIBtn');
+  if (drawROIBtn) {
+    drawROIBtn.addEventListener('click', startMapROIDrawing);
+  }
+
+  const clearROIBtn1 = document.getElementById('clearROIBtn1');
+  if (clearROIBtn1) {
+    clearROIBtn1.addEventListener('click', clearMapROI);
+  }
 
 
   // 文件上传输入
@@ -1081,10 +1054,10 @@ function enhanceSampleSelector() {
   }
 
   // 保存原始选择函数
-  const originalSelectSample = sampleSelector.selectSample;
+  const originalSelectSample = window.sampleSelector.selectSample;
 
   // 增强选择函数
-  sampleSelector.selectSample = function(sample) {
+  window.sampleSelector.selectSample = function(sample) {
     const result = originalSelectSample.call(this, sample);
 
     // 如果是单时相模式，更新主界面状态

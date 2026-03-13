@@ -381,8 +381,8 @@
           <button class="btn btn-warning" id="clearBtn">
             <i class="fas fa-eraser btn-icon"></i>清空绘制
           </button>
-          <button class="btn" id="saveBtn" disabled>
-            <i class="fas fa-download btn-icon"></i>保存截图
+          <button class="btn btn-info" id="screenshotBtn">
+            <i class="fas fa-camera btn-icon"></i>截图保存
           </button>
         </div>
       </div>
@@ -890,6 +890,71 @@
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
     integrity="sha384-okbbMvvx/qfQkmiQKfd5VifbKZ/W8p1qIsWvE1ROPUfHWsDcC8/BnHohF7vPg2T6" crossorigin=""></script>
 
+  <!-- 截图描述弹窗 -->
+  <div class="screenshot-modal" id="screenshotModal" style="display:none;">
+    <div class="screenshot-modal-content">
+      <div class="screenshot-modal-header">
+        <div class="screenshot-modal-title">
+          <i class="fas fa-camera" style="margin-right:8px;color:#667eea;"></i>
+          截图描述
+        </div>
+        <button class="screenshot-modal-close" id="screenshotModalCloseBtn" title="关闭">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="screenshot-modal-body">
+        <!-- 第一排：主场景和子场景下拉框 -->
+        <div class="screenshot-scene-row">
+          <div class="screenshot-scene-select">
+            <label class="screenshot-label">主场景</label>
+            <select id="mainSceneSelect" class="screenshot-select">
+              <option value="">请选择主场景</option>
+              <option value="违法建设">违法建设</option>
+              <option value="生态破坏">生态破坏</option>
+              <option value="环境违法">环境违法</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="screenshot-scene-select">
+            <label class="screenshot-label">子场景</label>
+            <select id="subSceneSelect" class="screenshot-select" disabled>
+              <option value="">请先选择主场景</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 第二排：截取的两个时相图像 -->
+        <div class="screenshot-images-row">
+          <div class="screenshot-image-container">
+            <div class="screenshot-image-label" id="screenshotImage1Label">2023年</div>
+            <img id="screenshotImage1" class="screenshot-image" src="" alt="截取图像">
+          </div>
+          <div class="screenshot-image-container">
+            <div class="screenshot-image-label" id="screenshotImage2Label">2025年</div>
+            <img id="screenshotImage2" class="screenshot-image" src="" alt="截取图像">
+          </div>
+        </div>
+
+        <!-- 第三排：描述输入框 -->
+        <div class="screenshot-description-row">
+          <label class="screenshot-label">描述文本</label>
+          <textarea id="screenshotDescription" class="screenshot-textarea" placeholder="该线索属于XX主场景XX子场景"></textarea>
+        </div>
+
+        <!-- 右下角保存按钮 -->
+        <div class="screenshot-actions">
+          <button class="btn btn-secondary" id="cancelScreenshotBtn">
+            <i class="fas fa-times btn-icon"></i>取消
+          </button>
+          <button class="btn btn-success" id="saveScreenshotBtn">
+            <i class="fas fa-save btn-icon"></i>保存
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 主JS文件 -->
   <!-- 自定义JS模块 -->
   <script src="js/config.js"></script>
@@ -900,6 +965,7 @@
   <script src="js/search.js"></script>
   <script src="js/sample-management.js"></script>
   <script src="js/sample-select.js"></script>
+  <script src="js/screenshot.js?v=20250313-2"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

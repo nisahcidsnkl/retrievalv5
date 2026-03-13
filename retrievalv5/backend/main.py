@@ -114,6 +114,7 @@ app.mount("/masks", StaticFiles(directory=settings.MASKS_ROOT), name="masks")
 app.include_router(routers.health.router, tags=["健康检查"])
 app.include_router(routers.search.router, tags=["搜索"])
 app.include_router(routers.samples.router, tags=["样本管理"])
+app.include_router(routers.screenshot.router, tags=["截图"])
 
 # 依赖注入
 @app.get("/")
@@ -130,5 +131,8 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.PORT,
         reload=settings.DEBUG,
-        workers=1
+        workers=1,
+        limit_concurrency=20,  # 限制并发连接数
+        timeout_keep_alive=5,  # 5秒后关闭空闲连接
+        timeout_graceful_shutdown=10  # 优雅关闭超时
     )

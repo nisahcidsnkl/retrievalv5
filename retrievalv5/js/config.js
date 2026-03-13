@@ -1,6 +1,6 @@
 //config.js
 const Config = {
-  serverUrl: 'http://localhost:5008',
+  serverUrl: 'http://localhost:5009',
   zoomLevel: 18,
   tileSize: 256,
   patchSize: 64,
@@ -25,7 +25,7 @@ const Config = {
   tdtSubdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
   geocodeProvider: 'tianditu',
   geocodeDirectInBrowser: false,
-  geocodeProxyUrl: 'http://localhost:5007/geocode',
-  samplesUrl: 'http://localhost:5007/samples',
-  masksUrl: 'http://localhost:5007/masks'
+  geocodeProxyUrl: 'http://localhost:5009/geocode',
+  samplesUrl: 'http://localhost:5009/samples',
+  masksUrl: 'http://localhost:5009/masks'
 };

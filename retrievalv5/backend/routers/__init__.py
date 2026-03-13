@@ -13,7 +13,7 @@ parent_dir = Path(__file__).parent.parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
-from . import health, search, samples
+from . import health, search, samples, screenshot
 
-__all__ = ['health', 'search', 'samples']
+__all__ = ['health', 'search', 'samples', 'screenshot']
 

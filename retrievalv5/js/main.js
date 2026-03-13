@@ -48,6 +48,12 @@ window.onload = async () => {
   await initMap();
   initEvents();
   initLocSearch();
+
+  // 初始化截图功能
+  if (typeof initScreenshotFeature === 'function') {
+    initScreenshotFeature();
+  }
+
   console.log('地图初始化完成');
 
 

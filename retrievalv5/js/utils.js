@@ -210,8 +210,6 @@ function updatePreviewFromBase64(imageBase64, maskBase64) {
 
     previewImage.src = URL.createObjectURL(imageBlob);
     previewMask.src = URL.createObjectURL(maskBlob);
-
-    document.getElementById('saveBtn').disabled = false;
   } catch (error) {
     console.error('更新预览失败:', error);
     showNotification('预览更新失败', 'error');
@@ -231,20 +229,40 @@ function updatePreviewFromDataUrl(imageDataUrl, maskDataUrl) {
     previewArea.classList.add('fade-in');
 
     const previewImage = document.getElementById('previewImage');
-    const previewMask = document.getElementById('previewMask');
 
-    if (previewImage.src) { try { URL.revokeObjectURL(previewImage.src); } catch (e) {} }
-    if (previewMask.src)  { try { URL.revokeObjectURL(previewMask.src); } catch (e) {} }
+        const previewMask = document.getElementById('previewMask');
 
-    previewImage.src = URL.createObjectURL(imageBlob);
-    previewMask.src = URL.createObjectURL(maskBlob);
+    
 
-    document.getElementById('saveBtn').disabled = false;
-  } catch (e) {
-    console.error(e);
-    showNotification('预览更新失败', 'error');
-  }
-}
+    
+
+        if (previewImage.src) {
+
+          try { URL.revokeObjectURL(previewImage.src); } catch (e) {}
+
+        }
+
+        if (previewMask.src) {
+
+          try { URL.revokeObjectURL(previewMask.src); } catch (e) {}
+
+        }
+
+    
+
+        previewImage.src = URL.createObjectURL(imageBlob);
+
+        previewMask.src = URL.createObjectURL(maskBlob);
+
+      } catch (e) {
+
+        console.error(e);
+
+        showNotification('预览更新失败', 'error');
+
+      }
+
+    }
 
 function updateStatsPanel(stats) {
   const statsPanel = document.getElementById('statsPanel');
@@ -295,7 +313,6 @@ function resetToInitialState() {
   }
 //===============================================
   document.getElementById('searchBtn').disabled = true;
-  document.getElementById('saveBtn').disabled = true;
 
   document.getElementById('resultList').style.display = 'none';
 

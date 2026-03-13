@@ -268,6 +268,64 @@ class PolygonScreenshotGenerator:
 
         return final_image, final_mask, transform_info
 
+    def generate_rectangle_screenshot(self, bounds: Dict[str, float], zoom: int = 18, year: int = None) -> Image.Image:
+        """
+        生成矩形框截图（保持原始比例，不缩放）
+
+        Args:
+            bounds: 矩形框边界 {min_lat, min_lng, max_lat, max_lng}
+            zoom: 缩放级别
+            year: 年份
+
+        Returns:
+            截图图像
+        """
+        if year is None:
+            year = settings.DEFAULT_YEAR
+
+        min_lat = bounds.get("min_lat")
+        min_lng = bounds.get("min_lng")
+        max_lat = bounds.get("max_lat")
+        max_lng = bounds.get("max_lng")
+
+        # 转换为像素坐标
+        min_x, min_y = CoordinateConverter.latlng_to_pixel(min_lat, min_lng, zoom)
+        max_x, max_y = CoordinateConverter.latlng_to_pixel(max_lat, max_lng, zoom)
+
+        # 确保min和max顺序正确
+        min_x, max_x = min(min_x, max_x), max(min_x, max_x)
+        min_y, max_y = min(min_y, max_y), max(min_y, max_y)
+
+        # 计算需要的瓦片
+        tile_min_col, tile_min_row = CoordinateConverter.pixel_to_tile(min_x, min_y)
+        tile_max_col, tile_max_row = CoordinateConverter.pixel_to_tile(max_x, max_y)
+
+        # 创建拼接图像
+        tile_cols = tile_max_col - tile_min_col + 1
+        tile_rows = tile_max_row - tile_min_row + 1
+        mosaic_width = tile_cols * 256
+        mosaic_height = tile_rows * 256
+        mosaic_image = Image.new("RGB", (mosaic_width, mosaic_height))
+
+        # 加载并拼接瓦片
+        for col in range(tile_min_col, tile_max_col + 1):
+            for row in range(tile_min_row, tile_max_row + 1):
+                tile_img = self.load_tile(year, zoom, col, row)
+                mosaic_x = (col - tile_min_col) * 256
+                mosaic_y = (row - tile_min_row) * 256
+                mosaic_image.paste(tile_img, (mosaic_x, mosaic_y))
+
+        # 计算在拼接图像中的裁剪坐标
+        crop_x1 = int(min_x - tile_min_col * 256)
+        crop_y1 = int(min_y - tile_min_row * 256)
+        crop_x2 = int(max_x - tile_min_col * 256)
+        crop_y2 = int(max_y - tile_min_row * 256)
+
+        # 裁剪出目标区域
+        final_image = mosaic_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+
+        return final_image
+
     def image_to_base64(self, image: Image.Image) -> str:
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
